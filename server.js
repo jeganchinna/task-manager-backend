@@ -1,60 +1,61 @@
 import express from "express";
 import cors from "cors";
-import { createClient } from "@supabase/supabase-js";
+import bodyParser from "body-parser";
 
+// ---------------- Setup ----------------
 const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Enable CORS for all origins
 app.use(cors());
-app.use(express.json());
 
-// Supabase credentials
-const supabaseUrl = "https://fdkxhivfbrbhelgvobhz.supabase.co"; // your URL
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZka3hoaXZmYnJiaGVsZ3ZvYmh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg1NDc4MjIsImV4cCI6MjA3NDEyMzgyMn0.iY6jP7kXBPLYawajUyGwiXOvU5_QKfC-DCzVzWeTH5E"; // your anon key
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Parse JSON bodies
+app.use(bodyParser.json());
 
-// Get tasks for a user
-app.get("/tasks", async (req, res) => {
-  const user_id = req.query.user_id;
-  const { data, error } = await supabase
-    .from("tasks")
-    .select("*")
-    .eq("user_id", user_id)
-    .order("id", { ascending: true });
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
+// ---------------- In-memory tasks store ----------------
+let tasks = [
+  { id: 1, title: "First task from Supabase", done: false },
+  { id: 2, title: "Second task done", done: true },
+];
+let nextId = 3;
+
+// ---------------- Routes ----------------
+
+// Get all tasks
+app.get("/tasks", (req, res) => {
+  res.json(tasks);
 });
 
-// Add task
-app.post("/tasks", async (req, res) => {
-  const { title, user_id } = req.body;
-  const { data, error } = await supabase
-    .from("tasks")
-    .insert([{ title, done: false, user_id }])
-    .select();
-  if (error) return res.status(500).json({ error: error.message });
-  res.status(201).json(data[0]);
+// Add new task
+app.post("/tasks", (req, res) => {
+  const { title } = req.body;
+  if (!title) return res.status(400).json({ error: "Title required" });
+
+  const newTask = { id: nextId++, title, done: false };
+  tasks.push(newTask);
+  res.status(201).json(newTask);
 });
 
-// Update task
-app.patch("/tasks/:id", async (req, res) => {
+// Toggle done
+app.patch("/tasks/:id", (req, res) => {
   const { id } = req.params;
-  const { title, done } = req.body;
-  const { data, error } = await supabase
-    .from("tasks")
-    .update({ title, done })
-    .eq("id", id)
-    .select();
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data[0]);
+  const task = tasks.find((t) => t.id === parseInt(id));
+  if (!task) return res.status(404).json({ error: "Task not found" });
+
+  if ("done" in req.body) task.done = req.body.done;
+  if ("title" in req.body) task.title = req.body.title;
+
+  res.json(task);
 });
 
 // Delete task
-app.delete("/tasks/:id", async (req, res) => {
+app.delete("/tasks/:id", (req, res) => {
   const { id } = req.params;
-  const { error } = await supabase.from("tasks").delete().eq("id", id);
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ success: true });
+  tasks = tasks.filter((t) => t.id !== parseInt(id));
+  res.status(204).end();
 });
 
-// Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// ---------------- Start server ----------------
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
