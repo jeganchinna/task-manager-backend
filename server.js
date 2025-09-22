@@ -6,31 +6,24 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Replace these with your Supabase project details
+// Use env vars
 const supabase = createClient(
-  "YOUR_SUPABASE_URL",
-  "YOUR_SUPABASE_ANON_KEY"
+  process.env.URL,
+  process.env.API
 );
 
-// Get all tasks
+// Simple route to test
+app.get("/", (req, res) => {
+  res.send("Task Manager API Running 🚀");
+});
+
+// Example: fetch tasks
 app.get("/tasks", async (req, res) => {
   const { data, error } = await supabase.from("tasks").select("*");
-  res.json({ data, error });
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
 });
 
-// Add task
-app.post("/tasks", async (req, res) => {
-  const { task } = req.body;
-  const { data, error } = await supabase.from("tasks").insert([{ task }]);
-  res.json({ data, error });
+app.listen(3000, () => {
+  console.log("Server running on port 3000");
 });
-
-// Update task
-app.put("/tasks/:id", async (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
-  const { data, error } = await supabase.from("tasks").update({ status }).eq("id", id);
-  res.json({ data, error });
-});
-
-app.listen(3000, () => console.log("Server running on port 3000"));
