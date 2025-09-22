@@ -6,7 +6,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Replace with your Supabase URL and API Key
+// Supabase credentials
 const supabaseUrl = "https://fdkxhivfbrbhelgvobhz.supabase.co";
 const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZka3hoaXZmYnJiaGVsZ3ZvYmh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg1NDc4MjIsImV4cCI6MjA3NDEyMzgyMn0.iY6jP7kXBPLYawajUyGwiXOvU5_QKfC-DCzVzWeTH5E";
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -25,7 +25,7 @@ app.get("/tasks", async (req, res) => {
   }
 });
 
-// POST a new task
+// POST new task
 app.post("/tasks", async (req, res) => {
   try {
     const { title } = req.body;
@@ -40,14 +40,14 @@ app.post("/tasks", async (req, res) => {
   }
 });
 
-// Optional: Toggle task done
+// PATCH task (update done or title)
 app.patch("/tasks/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { done } = req.body;
+    const { title, done } = req.body;
     const { data, error } = await supabase
       .from("tasks")
-      .update({ done })
+      .update({ title, done })
       .eq("id", id)
       .select();
     if (error) throw error;
@@ -57,7 +57,17 @@ app.patch("/tasks/:id", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// DELETE task
+app.delete("/tasks/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase.from("tasks").delete().eq("id", id);
+    if (error) throw error;
+    res.status(204).send();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
