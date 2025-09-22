@@ -5,9 +5,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// In-memory task storage
 let tasks = [
-  { id: 1, title: "First task", done: false },
-  { id: 2, title: "Second task", done: true }
+  { id: 1, title: "First task from Supabase", done: false },
+  { id: 2, title: "Second task done", done: true }
 ];
 
 // GET all tasks
@@ -18,13 +19,14 @@ app.get("/tasks", (req, res) => {
 // POST new task
 app.post("/tasks", (req, res) => {
   const { title } = req.body;
+  if (!title) return res.status(400).json({ error: "Title required" });
   const id = tasks.length + 1;
   const newTask = { id, title, done: false };
   tasks.push(newTask);
   res.status(201).json(newTask);
 });
 
-// PUT task (update done or title)
+// PUT task (update title or done)
 app.put("/tasks/:id", (req, res) => {
   const id = parseInt(req.params.id);
   const { title, done } = req.body;
